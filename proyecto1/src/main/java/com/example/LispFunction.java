@@ -1,5 +1,8 @@
 package com.example;
 
-public class LispFunction {
-    
+import java.util.List;
+
+@FunctionalInterface
+public interface LispFunction {
+    Object apply(List<Object> args) throws EvaluatorException;
 }

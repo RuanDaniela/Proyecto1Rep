@@ -1,5 +1,7 @@
 package com.example;
 
-public class EvaluatorException {
-    
+public class EvaluatorException extends Exception {
+    public EvaluatorException(String message) {
+        super(message);
+    }
 }
