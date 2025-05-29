@@ -11,10 +11,8 @@ public class LispEvaluator {
 
     public LispEvaluator() {
         this.environment = new HashMap<>();
-        // Puedes predefinir funciones nativas aquí si quieres
     }
 
-    // Constructor para entorno local (clonar)
     public LispEvaluator(Map<String, Object> env) {
         this.environment = new HashMap<>(env);
     }
@@ -24,14 +22,11 @@ public class LispEvaluator {
             String token = (String) ast;
             // Detectar strings literales (con comillas dobles)
             if (token.startsWith("\"") && token.endsWith("\"")) {
-                // Retornar string sin comillas
                 return token.substring(1, token.length() - 1);
             }
-            // Buscar símbolo en entorno
             if (environment.containsKey(token)) {
                 return environment.get(token);
             }
-            // Tratar de parsear como número (entero o decimal)
             try {
                 if (token.contains(".")) {
                     return Double.parseDouble(token);
@@ -42,7 +37,6 @@ public class LispEvaluator {
                 throw new EvaluatorException("Símbolo no definido: " + token);
             }
         } else if (ast instanceof Number) {
-            // Números enteros y decimales se retornan tal cual
             return ast;
         } else if (ast instanceof List) {
             List<?> lista = (List<?>) ast;
@@ -76,12 +70,10 @@ public class LispEvaluator {
                             List<?> paramsLista = (List<?>) params;
                             if (args.size() != paramsLista.size())
                                 throw new EvaluatorException("Número de argumentos incorrecto para " + nombreFuncion);
-                            // Nuevo entorno local
                             Map<String, Object> localEnv = new HashMap<>(environment);
                             for (int i = 0; i < paramsLista.size(); i++) {
                                 localEnv.put((String) paramsLista.get(i), args.get(i));
                             }
-                            // Evaluar cuerpo con entorno local
                             LispEvaluator localEval = new LispEvaluator(localEnv);
                             Object resultado = null;
                             for (Object expr : cuerpo) {
@@ -101,7 +93,6 @@ public class LispEvaluator {
                         if (clausula.isEmpty()) continue;
                         Object condicion = clausula.get(0);
                         if ("t".equals(condicion)) {
-                            // Siempre verdadero
                             Object resultado = null;
                             for (int j = 1; j < clausula.size(); j++) {
                                 resultado = evaluar(clausula.get(j));
@@ -135,8 +126,28 @@ public class LispEvaluator {
                     }
                     return evaluarOperador(operador, argsEval);
 
+                // Nuevos predicados:
+                case "equal":
+                    if (lista.size() != 3)
+                        throw new EvaluatorException("equal requiere exactamente 2 argumentos");
+                    Object arg1 = evaluar(lista.get(1));
+                    Object arg2 = evaluar(lista.get(2));
+                    return equalLisp(arg1, arg2);
+
+                case "atom":
+                    if (lista.size() != 2)
+                        throw new EvaluatorException("atom requiere exactamente 1 argumento");
+                    Object arg = evaluar(lista.get(1));
+                    return !(arg instanceof List);
+
+                case "list":
+                    if (lista.size() != 2)
+                        throw new EvaluatorException("list requiere exactamente 1 argumento");
+                    Object argList = evaluar(lista.get(1));
+                    return argList instanceof List;
+
                 default:
-                    // Llamada a función
+                    // Llamada a función definida por el usuario
                     Object func = environment.get(operador);
                     if (func == null) throw new EvaluatorException("Función no definida: " + operador);
                     if (!(func instanceof LispFunction))
@@ -148,7 +159,7 @@ public class LispEvaluator {
                     return ((LispFunction) func).apply(argumentos);
             }
         } else {
-            return ast; // otros casos (null, etc)
+            return ast;
         }
     }
 
@@ -156,48 +167,37 @@ public class LispEvaluator {
         switch (operador) {
             case "+":
                 double suma = 0;
-                for (Object o : args) {
-                    suma += toDouble(o);
-                }
+                for (Object o : args) suma += toDouble(o);
                 if (suma == (int) suma) return (int) suma;
                 return suma;
 
             case "-":
                 double resta = toDouble(args.get(0));
-                for (int i = 1; i < args.size(); i++) {
-                    resta -= toDouble(args.get(i));
-                }
+                for (int i = 1; i < args.size(); i++) resta -= toDouble(args.get(i));
                 if (resta == (int) resta) return (int) resta;
                 return resta;
 
             case "*":
                 double prod = 1;
-                for (Object o : args) {
-                    prod *= toDouble(o);
-                }
+                for (Object o : args) prod *= toDouble(o);
                 if (prod == (int) prod) return (int) prod;
                 return prod;
 
             case "/":
                 double div = toDouble(args.get(0));
-                for (int i = 1; i < args.size(); i++) {
-                    div /= toDouble(args.get(i));
-                }
+                for (int i = 1; i < args.size(); i++) div /= toDouble(args.get(i));
                 return div;
 
             case "=":
-                if (args.size() != 2)
-                    throw new EvaluatorException("= requiere exactamente 2 argumentos");
+                if (args.size() != 2) throw new EvaluatorException("= requiere exactamente 2 argumentos");
                 return toDouble(args.get(0)) == toDouble(args.get(1));
 
             case "<":
-                if (args.size() != 2)
-                    throw new EvaluatorException("< requiere exactamente 2 argumentos");
+                if (args.size() != 2) throw new EvaluatorException("< requiere exactamente 2 argumentos");
                 return toDouble(args.get(0)) < toDouble(args.get(1));
 
             case ">":
-                if (args.size() != 2)
-                    throw new EvaluatorException("> requiere exactamente 2 argumentos");
+                if (args.size() != 2) throw new EvaluatorException("> requiere exactamente 2 argumentos");
                 return toDouble(args.get(0)) > toDouble(args.get(1));
 
             default:
@@ -211,4 +211,30 @@ public class LispEvaluator {
         throw new EvaluatorException("No se pudo convertir a número: " + o);
     }
 
+    // Método para comparar igualdad "deep" básica
+    private boolean equalLisp(Object a, Object b) {
+        if (a == b) return true;
+        if (a == null || b == null) return false;
+
+        if (a instanceof List && b instanceof List) {
+            List<?> listaA = (List<?>) a;
+            List<?> listaB = (List<?>) b;
+            if (listaA.size() != listaB.size()) return false;
+            for (int i = 0; i < listaA.size(); i++) {
+                if (!equalLisp(listaA.get(i), listaB.get(i))) return false;
+            }
+            return true;
+        }
+        return a.equals(b);
+    }
+
+    public interface LispFunction {
+        Object apply(List<Object> args) throws EvaluatorException;
+    }
+
+    public static class EvaluatorException extends Exception {
+        public EvaluatorException(String message) {
+            super(message);
+        }
+    }
 }
