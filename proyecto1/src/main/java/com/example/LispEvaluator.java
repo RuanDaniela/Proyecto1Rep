@@ -6,14 +6,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Evaluador para expresiones Lisp.
+ * Soporta evaluación de expresiones, definición de funciones y variables,
+ * y ejecución de funciones básicas como +, -, *, /, y condicionales.
+ */
 public class LispEvaluator {
     private Map<String, Object> environment;
 
+    /**
+     * Crea un nuevo evaluador con el entorno inicial que contiene funciones básicas.
+     */
     public LispEvaluator() {
         environment = new HashMap<>();
         cargarFuncionesBasicas();
     }
 
+    /**
+     * Carga las funciones básicas de Lisp en el entorno.
+     * Incluye operadores aritméticos, comparadores, y funciones tipo ATOM, LIST, EQUAL.
+     */
     private void cargarFuncionesBasicas() {
         environment.put("+", (LispFunction) args -> {
             double sum = 0;
@@ -73,11 +85,25 @@ public class LispEvaluator {
                 Objects.equals(evaluar(args.get(0)), evaluar(args.get(1))));
     }
 
+    /**
+     * Convierte un objeto a double, si es posible.
+     *
+     * @param num objeto a convertir
+     * @return valor double
+     * @throws EvaluatorException si el objeto no es numérico
+     */
     private double toDouble(Object num) throws EvaluatorException {
         if (num instanceof Number) return ((Number) num).doubleValue();
         throw new EvaluatorException("Se esperaba un número, pero se obtuvo: " + num);
     }
 
+    /**
+     * Evalúa una expresión representada por un AST.
+     *
+     * @param ast expresión a evaluar (puede ser String, Number, List)
+     * @return resultado de la evaluación
+     * @throws EvaluatorException si ocurre algún error en la evaluación
+     */
     public Object evaluar(Object ast) throws EvaluatorException {
         if (ast instanceof String) {
             String simbolo = (String) ast;
@@ -111,6 +137,13 @@ public class LispEvaluator {
         throw new EvaluatorException("Expresión no válida.");
     }
 
+    /**
+     * Evalúa una expresión condicional (cond).
+     *
+     * @param list lista que contiene cond y sus cláusulas
+     * @return resultado de la primera cláusula verdadera o null si ninguna lo es
+     * @throws EvaluatorException si la sintaxis es incorrecta
+     */
     private Object evaluarCond(List<Object> list) throws EvaluatorException {
         for (int i = 1; i < list.size(); i++) {
             List<Object> cond = (List<Object>) list.get(i);
@@ -124,6 +157,13 @@ public class LispEvaluator {
         return null;
     }
 
+    /**
+     * Define una nueva función Lisp y la agrega al entorno.
+     *
+     * @param list lista que contiene defun, nombre, parámetros y cuerpo
+     * @return nombre de la función definida
+     * @throws EvaluatorException si la definición es inválida
+     */
     private Object definirFuncionLisp(List<Object> list) throws EvaluatorException {
         if (list.size() < 4) throw new EvaluatorException("defun requiere nombre, parámetros y cuerpo.");
         if (!(list.get(1) instanceof String)) throw new EvaluatorException("Nombre inválido.");
@@ -151,6 +191,13 @@ public class LispEvaluator {
         return nombre;
     }
 
+    /**
+     * Define o reasigna una variable en el entorno.
+     *
+     * @param list lista que contiene setq, nombre y valor
+     * @return valor asignado
+     * @throws EvaluatorException si la sintaxis es inválida
+     */
     private Object definirVariableLisp(List<Object> list) throws EvaluatorException {
         if (list.size() != 3) throw new EvaluatorException("setq requiere nombre y valor.");
         if (!(list.get(1) instanceof String)) throw new EvaluatorException("Nombre inválido.");
@@ -160,6 +207,14 @@ public class LispEvaluator {
         return valor;
     }
 
+    /**
+     * Evalúa una expresión en un entorno local.
+     *
+     * @param ast     expresión a evaluar
+     * @param entorno entorno local
+     * @return resultado de la evaluación
+     * @throws EvaluatorException si ocurre error en la evaluación
+     */
     private Object evaluarEnEntorno(Object ast, Map<String, Object> entorno) throws EvaluatorException {
         LispEvaluator local = new LispEvaluator();
         local.environment = entorno;

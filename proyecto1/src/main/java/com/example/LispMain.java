@@ -7,7 +7,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+/**
+ * Clase principal que implementa un intérprete simple de LISP en consola.
+ * Permite ingresar comandos para evaluar expresiones LISP o cargar expresiones desde archivos.
+ */
 public class LispMain {
+
+    /**
+     * Método principal que inicia el intérprete LISP en consola.
+     * Escucha comandos del usuario hasta que se ingresa "salir".
+     * 
+     * Comandos soportados:
+     * - salir: termina el programa.
+     * - archivo <ruta>: carga y evalúa expresiones LISP desde un archivo.
+     * 
+     * @param args argumentos desde línea de comandos (no usados)
+     */
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
         System.out.println("Bienvenido al intérprete de LISP.");
@@ -47,6 +62,12 @@ public class LispMain {
         scanner.close();
     }
 
+    /**
+     * Ejecuta una expresión LISP: verifica paréntesis, parsea, evalúa y muestra resultado o error.
+     * 
+     * @param input expresión LISP en formato texto
+     * @param evaluator objeto evaluador de expresiones LISP
+     */
     private static void ejecutarExpresion(String input, LispEvaluator evaluator) {
         try {
             if (!LispLexer.parentesisBalanceados(input)) {
@@ -63,6 +84,13 @@ public class LispMain {
         }
     }
 
+    /**
+     * Lee un archivo que contiene expresiones LISP, agrupando líneas hasta completar expresiones balanceadas.
+     * 
+     * @param ruta ruta al archivo con expresiones LISP
+     * @return lista de expresiones LISP completas como cadenas
+     * @throws IOException si hay un error leyendo el archivo
+     */
     private static List<String> leerExpresionesDesdeArchivo(String ruta) throws IOException {
         BufferedReader br = new BufferedReader(new FileReader(ruta));
         StringBuilder expresion = new StringBuilder();
