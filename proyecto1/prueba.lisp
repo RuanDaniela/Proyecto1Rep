@@ -19,7 +19,7 @@
 (setq b 4)
 (+ a (* b 2))
 
-(cond ((= 1 0) "nope")
+(cond ((= 1 0) "no")
       ((= 2 2) "sí")
       (t "nunca llega acá"))
 

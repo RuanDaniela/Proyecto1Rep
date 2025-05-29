@@ -4,220 +4,211 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
-/**
- * Evaluador para expresiones Lisp.
- * Soporta evaluación de expresiones, definición de funciones y variables,
- * y ejecución de funciones básicas como +, -, *, /, y condicionales.
- */
 public class LispEvaluator {
-    private Map<String, Object> environment;
 
-    /**
-     * Crea un nuevo evaluador con el entorno inicial que contiene funciones básicas.
-     */
+    private final Map<String, Object> environment;
+
     public LispEvaluator() {
-        environment = new HashMap<>();
-        cargarFuncionesBasicas();
+        this.environment = new HashMap<>();
+        // Puedes predefinir funciones nativas aquí si quieres
     }
 
-    /**
-     * Carga las funciones básicas de Lisp en el entorno.
-     * Incluye operadores aritméticos, comparadores, y funciones tipo ATOM, LIST, EQUAL.
-     */
-    private void cargarFuncionesBasicas() {
-        environment.put("+", (LispFunction) args -> {
-            double sum = 0;
-            for (Object arg : args) {
-                sum += toDouble(evaluar(arg));
-            }
-            return sum;
-        });
-
-        environment.put("-", (LispFunction) args -> {
-            if (args.isEmpty()) throw new EvaluatorException("'-' requiere al menos un argumento.");
-            double result = toDouble(evaluar(args.get(0)));
-            if (args.size() == 1) return -result;
-            for (int i = 1; i < args.size(); i++) {
-                result -= toDouble(evaluar(args.get(i)));
-            }
-            return result;
-        });
-
-        environment.put("*", (LispFunction) args -> {
-            double result = 1;
-            for (Object arg : args) {
-                result *= toDouble(evaluar(arg));
-            }
-            return result;
-        });
-
-        environment.put("/", (LispFunction) args -> {
-            if (args.size() < 2) throw new EvaluatorException("'/' requiere al menos dos argumentos.");
-            double result = toDouble(evaluar(args.get(0)));
-            for (int i = 1; i < args.size(); i++) {
-                double divisor = toDouble(evaluar(args.get(i)));
-                if (divisor == 0) throw new EvaluatorException("División por cero.");
-                result /= divisor;
-            }
-            return result;
-        });
-
-        environment.put(">", (LispFunction) args ->
-                toDouble(evaluar(args.get(0))) > toDouble(evaluar(args.get(1))));
-
-        environment.put("<", (LispFunction) args ->
-                toDouble(evaluar(args.get(0))) < toDouble(evaluar(args.get(1))));
-
-        environment.put("=", (LispFunction) args ->
-                Objects.equals(evaluar(args.get(0)), evaluar(args.get(1))));
-
-        environment.put("ATOM", (LispFunction) args -> {
-            Object val = evaluar(args.get(0));
-            return (val instanceof String) || (val instanceof Number);
-        });
-
-        environment.put("LIST", (LispFunction) args ->
-                evaluar(args.get(0)) instanceof List);
-
-        environment.put("EQUAL", (LispFunction) args ->
-                Objects.equals(evaluar(args.get(0)), evaluar(args.get(1))));
+    // Constructor para entorno local (clonar)
+    public LispEvaluator(Map<String, Object> env) {
+        this.environment = new HashMap<>(env);
     }
 
-    /**
-     * Convierte un objeto a double, si es posible.
-     *
-     * @param num objeto a convertir
-     * @return valor double
-     * @throws EvaluatorException si el objeto no es numérico
-     */
-    private double toDouble(Object num) throws EvaluatorException {
-        if (num instanceof Number) return ((Number) num).doubleValue();
-        throw new EvaluatorException("Se esperaba un número, pero se obtuvo: " + num);
-    }
-
-    /**
-     * Evalúa una expresión representada por un AST.
-     *
-     * @param ast expresión a evaluar (puede ser String, Number, List)
-     * @return resultado de la evaluación
-     * @throws EvaluatorException si ocurre algún error en la evaluación
-     */
     public Object evaluar(Object ast) throws EvaluatorException {
         if (ast instanceof String) {
-            String simbolo = (String) ast;
-            if (environment.containsKey(simbolo)) return environment.get(simbolo);
-            throw new EvaluatorException("Símbolo no definido: " + simbolo);
+            String token = (String) ast;
+            // Detectar strings literales (con comillas dobles)
+            if (token.startsWith("\"") && token.endsWith("\"")) {
+                // Retornar string sin comillas
+                return token.substring(1, token.length() - 1);
+            }
+            // Buscar símbolo en entorno
+            if (environment.containsKey(token)) {
+                return environment.get(token);
+            }
+            // Tratar de parsear como número (entero o decimal)
+            try {
+                if (token.contains(".")) {
+                    return Double.parseDouble(token);
+                } else {
+                    return Integer.parseInt(token);
+                }
+            } catch (NumberFormatException e) {
+                throw new EvaluatorException("Símbolo no definido: " + token);
+            }
         } else if (ast instanceof Number) {
+            // Números enteros y decimales se retornan tal cual
             return ast;
         } else if (ast instanceof List) {
-            List<Object> list = (List<Object>) ast;
-            if (list.isEmpty()) throw new EvaluatorException("Lista vacía.");
-            Object primero = list.get(0);
-            if (!(primero instanceof String)) throw new EvaluatorException("Se esperaba nombre de función.");
-            String fn = (String) primero;
-
-            if (fn.equals("defun")) return definirFuncionLisp(list);
-            if (fn.equals("setq")) return definirVariableLisp(list);
-            if (fn.equals("quote")) {
-                if (list.size() != 2) throw new EvaluatorException("quote requiere un argumento.");
-                return list.get(1);
+            List<?> lista = (List<?>) ast;
+            if (lista.isEmpty()) {
+                throw new EvaluatorException("Lista vacía no es una expresión válida");
             }
-            if (fn.equals("cond")) return evaluarCond(list);
-
-            Object funcion = environment.get(fn);
-            if (!(funcion instanceof LispFunction)) throw new EvaluatorException("Función no definida: " + fn);
-
-            LispFunction lf = (LispFunction) funcion;
-            List<Object> args = new ArrayList<>();
-            for (int i = 1; i < list.size(); i++) args.add(evaluar(list.get(i)));
-            return lf.apply(args);
-        }
-        throw new EvaluatorException("Expresión no válida.");
-    }
-
-    /**
-     * Evalúa una expresión condicional (cond).
-     *
-     * @param list lista que contiene cond y sus cláusulas
-     * @return resultado de la primera cláusula verdadera o null si ninguna lo es
-     * @throws EvaluatorException si la sintaxis es incorrecta
-     */
-    private Object evaluarCond(List<Object> list) throws EvaluatorException {
-        for (int i = 1; i < list.size(); i++) {
-            List<Object> cond = (List<Object>) list.get(i);
-            if (cond.size() != 2) throw new EvaluatorException("Cada cláusula cond debe tener 2 elementos.");
-            Object condicion = evaluar(cond.get(0));
-            if ((condicion instanceof Boolean && (Boolean) condicion)
-                    || (condicion instanceof Number && ((Number) condicion).doubleValue() != 0)) {
-                return evaluar(cond.get(1));
+            Object primerElemento = lista.get(0);
+            if (!(primerElemento instanceof String)) {
+                throw new EvaluatorException("Operador inválido: " + primerElemento);
             }
+            String operador = (String) primerElemento;
+
+            switch (operador) {
+                case "setq":
+                    if (lista.size() != 3) throw new EvaluatorException("setq requiere 2 argumentos");
+                    String variable = (String) lista.get(1);
+                    Object valor = evaluar(lista.get(2));
+                    environment.put(variable, valor);
+                    return valor;
+
+                case "defun":
+                    if (lista.size() < 4) throw new EvaluatorException("defun requiere nombre, parámetros y cuerpo");
+                    String nombreFuncion = (String) lista.get(1);
+                    Object params = lista.get(2);
+                    List<?> cuerpo = lista.subList(3, lista.size());
+                    environment.put(nombreFuncion, new LispFunction() {
+                        @Override
+                        public Object apply(List<Object> args) throws EvaluatorException {
+                            if (!(params instanceof List))
+                                throw new EvaluatorException("Parámetros deben ser una lista");
+                            List<?> paramsLista = (List<?>) params;
+                            if (args.size() != paramsLista.size())
+                                throw new EvaluatorException("Número de argumentos incorrecto para " + nombreFuncion);
+                            // Nuevo entorno local
+                            Map<String, Object> localEnv = new HashMap<>(environment);
+                            for (int i = 0; i < paramsLista.size(); i++) {
+                                localEnv.put((String) paramsLista.get(i), args.get(i));
+                            }
+                            // Evaluar cuerpo con entorno local
+                            LispEvaluator localEval = new LispEvaluator(localEnv);
+                            Object resultado = null;
+                            for (Object expr : cuerpo) {
+                                resultado = localEval.evaluar(expr);
+                            }
+                            return resultado;
+                        }
+                    });
+                    return nombreFuncion;
+
+                case "cond":
+                    for (int i = 1; i < lista.size(); i++) {
+                        Object condExpr = lista.get(i);
+                        if (!(condExpr instanceof List))
+                            throw new EvaluatorException("Cada cláusula cond debe ser una lista");
+                        List<?> clausula = (List<?>) condExpr;
+                        if (clausula.isEmpty()) continue;
+                        Object condicion = clausula.get(0);
+                        if ("t".equals(condicion)) {
+                            // Siempre verdadero
+                            Object resultado = null;
+                            for (int j = 1; j < clausula.size(); j++) {
+                                resultado = evaluar(clausula.get(j));
+                            }
+                            return resultado;
+                        } else {
+                            Object valCond = evaluar(condicion);
+                            if (valCond instanceof Boolean && (Boolean) valCond) {
+                                Object resultado = null;
+                                for (int j = 1; j < clausula.size(); j++) {
+                                    resultado = evaluar(clausula.get(j));
+                                }
+                                return resultado;
+                            }
+                        }
+                    }
+                    return null;
+
+                case "+":
+                case "-":
+                case "*":
+                case "/":
+                case "=":
+                case "<":
+                case ">":
+                    if (lista.size() < 3)
+                        throw new EvaluatorException(operador + " requiere al menos 2 argumentos");
+                    List<Object> argsEval = new ArrayList<>();
+                    for (int i = 1; i < lista.size(); i++) {
+                        argsEval.add(evaluar(lista.get(i)));
+                    }
+                    return evaluarOperador(operador, argsEval);
+
+                default:
+                    // Llamada a función
+                    Object func = environment.get(operador);
+                    if (func == null) throw new EvaluatorException("Función no definida: " + operador);
+                    if (!(func instanceof LispFunction))
+                        throw new EvaluatorException(operador + " no es una función");
+                    List<Object> argumentos = new ArrayList<>();
+                    for (int i = 1; i < lista.size(); i++) {
+                        argumentos.add(evaluar(lista.get(i)));
+                    }
+                    return ((LispFunction) func).apply(argumentos);
+            }
+        } else {
+            return ast; // otros casos (null, etc)
         }
-        return null;
     }
 
-    /**
-     * Define una nueva función Lisp y la agrega al entorno.
-     *
-     * @param list lista que contiene defun, nombre, parámetros y cuerpo
-     * @return nombre de la función definida
-     * @throws EvaluatorException si la definición es inválida
-     */
-    private Object definirFuncionLisp(List<Object> list) throws EvaluatorException {
-        if (list.size() < 4) throw new EvaluatorException("defun requiere nombre, parámetros y cuerpo.");
-        if (!(list.get(1) instanceof String)) throw new EvaluatorException("Nombre inválido.");
-        String nombre = (String) list.get(1);
-        if (!(list.get(2) instanceof List)) throw new EvaluatorException("Parámetros inválidos.");
+    private Object evaluarOperador(String operador, List<Object> args) throws EvaluatorException {
+        switch (operador) {
+            case "+":
+                double suma = 0;
+                for (Object o : args) {
+                    suma += toDouble(o);
+                }
+                if (suma == (int) suma) return (int) suma;
+                return suma;
 
-        List<?> paramList = (List<?>) list.get(2);
-        List<String> params = new ArrayList<>();
-        for (Object p : paramList) {
-            if (!(p instanceof String)) throw new EvaluatorException("Parámetro inválido.");
-            params.add((String) p);
+            case "-":
+                double resta = toDouble(args.get(0));
+                for (int i = 1; i < args.size(); i++) {
+                    resta -= toDouble(args.get(i));
+                }
+                if (resta == (int) resta) return (int) resta;
+                return resta;
+
+            case "*":
+                double prod = 1;
+                for (Object o : args) {
+                    prod *= toDouble(o);
+                }
+                if (prod == (int) prod) return (int) prod;
+                return prod;
+
+            case "/":
+                double div = toDouble(args.get(0));
+                for (int i = 1; i < args.size(); i++) {
+                    div /= toDouble(args.get(i));
+                }
+                return div;
+
+            case "=":
+                if (args.size() != 2)
+                    throw new EvaluatorException("= requiere exactamente 2 argumentos");
+                return toDouble(args.get(0)) == toDouble(args.get(1));
+
+            case "<":
+                if (args.size() != 2)
+                    throw new EvaluatorException("< requiere exactamente 2 argumentos");
+                return toDouble(args.get(0)) < toDouble(args.get(1));
+
+            case ">":
+                if (args.size() != 2)
+                    throw new EvaluatorException("> requiere exactamente 2 argumentos");
+                return toDouble(args.get(0)) > toDouble(args.get(1));
+
+            default:
+                throw new EvaluatorException("Operador no soportado: " + operador);
         }
-
-        List<Object> cuerpo = list.subList(3, list.size());
-        environment.put(nombre, (LispFunction) args -> {
-            if (args.size() != params.size())
-                throw new EvaluatorException("Argumentos incorrectos en llamada a: " + nombre);
-            Map<String, Object> localEnv = new HashMap<>(environment);
-            for (int i = 0; i < params.size(); i++) localEnv.put(params.get(i), args.get(i));
-            Object res = null;
-            for (Object expr : cuerpo) res = evaluarEnEntorno(expr, localEnv);
-            return res;
-        });
-
-        return nombre;
     }
 
-    /**
-     * Define o reasigna una variable en el entorno.
-     *
-     * @param list lista que contiene setq, nombre y valor
-     * @return valor asignado
-     * @throws EvaluatorException si la sintaxis es inválida
-     */
-    private Object definirVariableLisp(List<Object> list) throws EvaluatorException {
-        if (list.size() != 3) throw new EvaluatorException("setq requiere nombre y valor.");
-        if (!(list.get(1) instanceof String)) throw new EvaluatorException("Nombre inválido.");
-        String nombre = (String) list.get(1);
-        Object valor = evaluar(list.get(2));
-        environment.put(nombre, valor);
-        return valor;
+    private double toDouble(Object o) throws EvaluatorException {
+        if (o instanceof Integer) return ((Integer) o).doubleValue();
+        if (o instanceof Double) return (Double) o;
+        throw new EvaluatorException("No se pudo convertir a número: " + o);
     }
 
-    /**
-     * Evalúa una expresión en un entorno local.
-     *
-     * @param ast     expresión a evaluar
-     * @param entorno entorno local
-     * @return resultado de la evaluación
-     * @throws EvaluatorException si ocurre error en la evaluación
-     */
-    private Object evaluarEnEntorno(Object ast, Map<String, Object> entorno) throws EvaluatorException {
-        LispEvaluator local = new LispEvaluator();
-        local.environment = entorno;
-        return local.evaluar(ast);
-    }
 }
