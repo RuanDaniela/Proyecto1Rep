@@ -20,7 +20,6 @@ public class LispEvaluator {
     public Object evaluar(Object ast) throws EvaluatorException {
         if (ast instanceof String) {
             String token = (String) ast;
-            // Detectar strings literales (con comillas dobles)
             if (token.startsWith("\"") && token.endsWith("\"")) {
                 return token.substring(1, token.length() - 1);
             }
@@ -84,6 +83,11 @@ public class LispEvaluator {
                     });
                     return nombreFuncion;
 
+                case "quote":
+                    if (lista.size() != 2)
+                        throw new EvaluatorException("quote requiere exactamente 1 argumento");
+                    return lista.get(1);
+
                 case "cond":
                     for (int i = 1; i < lista.size(); i++) {
                         Object condExpr = lista.get(i);
@@ -126,7 +130,6 @@ public class LispEvaluator {
                     }
                     return evaluarOperador(operador, argsEval);
 
-                // Nuevos predicados:
                 case "equal":
                     if (lista.size() != 3)
                         throw new EvaluatorException("equal requiere exactamente 2 argumentos");
@@ -147,7 +150,6 @@ public class LispEvaluator {
                     return argList instanceof List;
 
                 default:
-                    // Llamada a función definida por el usuario
                     Object func = environment.get(operador);
                     if (func == null) throw new EvaluatorException("Función no definida: " + operador);
                     if (!(func instanceof LispFunction))
@@ -211,11 +213,9 @@ public class LispEvaluator {
         throw new EvaluatorException("No se pudo convertir a número: " + o);
     }
 
-    // Método para comparar igualdad "deep" básica
     private boolean equalLisp(Object a, Object b) {
         if (a == b) return true;
         if (a == null || b == null) return false;
-
         if (a instanceof List && b instanceof List) {
             List<?> listaA = (List<?>) a;
             List<?> listaB = (List<?>) b;
