@@ -5,18 +5,37 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Evaluador de expresiones tipo Lisp. Permite la evaluación de ASTs (árboles de sintaxis abstracta)
+ * representados como listas anidadas.
+ */
 public class LispEvaluator {
 
     private final Map<String, Object> environment;
 
+    /**
+     * Constructor por defecto. Inicializa un entorno vacío.
+     */
     public LispEvaluator() {
         this.environment = new HashMap<>();
     }
 
+    /**
+     * Constructor con entorno predefinido.
+     *
+     * @param env Mapa con variables y funciones iniciales.
+     */
     public LispEvaluator(Map<String, Object> env) {
         this.environment = new HashMap<>(env);
     }
 
+    /**
+     * Evalúa un AST (expresión en forma de objeto).
+     *
+     * @param ast Expresión a evaluar.
+     * @return Resultado de la evaluación.
+     * @throws EvaluatorException Si hay errores de sintaxis o símbolos indefinidos.
+     */
     public Object evaluar(Object ast) throws EvaluatorException {
         if (ast instanceof String) {
             String token = (String) ast;
@@ -165,6 +184,14 @@ public class LispEvaluator {
         }
     }
 
+    /**
+     * Evalúa operaciones matemáticas y lógicas.
+     *
+     * @param operador Operador como "+", "-", etc.
+     * @param args     Argumentos ya evaluados.
+     * @return Resultado de la operación.
+     * @throws EvaluatorException Si hay errores de tipo o argumentos.
+     */
     private Object evaluarOperador(String operador, List<Object> args) throws EvaluatorException {
         switch (operador) {
             case "+":
@@ -207,12 +234,26 @@ public class LispEvaluator {
         }
     }
 
+    /**
+     * Convierte un objeto a número decimal.
+     *
+     * @param o Objeto a convertir.
+     * @return Valor decimal.
+     * @throws EvaluatorException Si no es convertible a número.
+     */
     private double toDouble(Object o) throws EvaluatorException {
         if (o instanceof Integer) return ((Integer) o).doubleValue();
         if (o instanceof Double) return (Double) o;
         throw new EvaluatorException("No se pudo convertir a número: " + o);
     }
 
+    /**
+     * Compara dos objetos al estilo Lisp.
+     *
+     * @param a Primer objeto.
+     * @param b Segundo objeto.
+     * @return true si son iguales, false si no.
+     */
     private boolean equalLisp(Object a, Object b) {
         if (a == b) return true;
         if (a == null || b == null) return false;
@@ -228,10 +269,16 @@ public class LispEvaluator {
         return a.equals(b);
     }
 
+    /**
+     * Interfaz funcional para definir funciones Lisp.
+     */
     public interface LispFunction {
         Object apply(List<Object> args) throws EvaluatorException;
     }
 
+    /**
+     * Excepción personalizada para errores de evaluación Lisp.
+     */
     public static class EvaluatorException extends Exception {
         public EvaluatorException(String message) {
             super(message);
