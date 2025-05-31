@@ -2,8 +2,6 @@
 
 Este proyecto en Java permite cargar un archivo `.lisp` desde una dirección dada por el usuario, analizar su contenido y realizar validaciones básicas sobre la sintaxis de las expresiones contenidas en el archivo. El objetivo principal es practicar conceptos de lectura de archivos, estructuras de datos y procesamiento de cadenas.
 
----
-
 ## ¿Qué hace el programa?
 
 - Solicita al usuario la ruta exacta de un archivo `.lisp`.
@@ -13,56 +11,57 @@ Este proyecto en Java permite cargar un archivo `.lisp` desde una dirección dad
 
 ---
 
-## Instrucciones para compilar y ejecutar (para el auxiliar)
+## ¿Cómo usar este proyecto?
 
-Este proyecto fue desarrollado utilizando **Maven**.
+Este proyecto usa **Maven** como herramienta de construcción. A continuación se presentan los pasos para compilar y correr el programa:
 
-### 1. Clonar o descargar el proyecto
+### 1. Clona o descarga este repositorio.
 
 ```bash
 git clone https://github.com/usuario/mi-proyecto-lisp.git
 cd mi-proyecto-lisp
-2. Compilar el proyecto
-Ejecuta el siguiente comando en la raíz del proyecto:
-
+2. Compila el proyecto con Maven:
 bash
 Copiar
 Editar
 mvn compile
-3. Ejecutar el programa
-Utiliza el siguiente comando:
+3. Ejecuta el programa:
+Puedes ejecutar la clase Main desde línea de comandos, por ejemplo:
 
 bash
 Copiar
 Editar
 mvn exec:java -Dexec.mainClass="org.example.Main"
-⚠️ Instrucción importante para la ejecución
-Cuando se esté ejecutando el programa, el sistema pedirá que el usuario escriba la ruta del archivo .lisp.
+⚠️ IMPORTANTE: Cuando el programa te pida la dirección del archivo .lisp, debes ingresar la ruta absoluta o relativa al proyecto.
 
-Por ejemplo:
-
-En Windows:
+Ejemplo:
+Si el archivo está en el escritorio y usas Windows:
 
 makefile
 Copiar
 Editar
 C:\Users\TuUsuario\Desktop\archivo.lisp
 
-En Mac/Linux:
+Si estás en Linux o Mac:
+
 bash
 Copiar
 Editar
 /home/tuusuario/Escritorio/archivo.lisp
 
-El programa no funciona sin que se proporcione esta ruta, ya que no hay archivo .lisp embebido en el proyecto.
-
 ¿Cómo correr las pruebas?
-En caso de haber pruebas unitarias (JUnit), se pueden ejecutar con:
+Si este proyecto incluye pruebas unitarias, puedes ejecutarlas con:
 
 bash
 Copiar
 Editar
 mvn test
-Autora
+Notas para el auxiliar (o persona que revisa el proyecto)
+Asegúrese de tener Java y Maven instalados.
 
-Este proyecto fue desarrollado por Daniela Ruano, con la colaboración de ChatGPT (OpenAI) para el diseño y redacción del código y la documentación
+El archivo .lisp no está embebido en el proyecto. El programa pedirá que se escriba la ruta manualmente al momento de la ejecución.
+
+Si desea probar con un archivo propio, puede copiar cualquier contenido Lisp válido (como listas con paréntesis balanceados) y guardarlo en un archivo .lisp para usarlo en la prueba.
+
+Autor
+Este proyecto fue realizado por Daniela Ruano, con la ayuda de ChatGPT (de OpenAI) para estructurar el código 
